@@ -1,18 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
-<button onclick="toggleSettings()" class="absolute top-4 right-4 text-white bg-black/20 p-2 rounded-full">⚙️</button>
-
-<div id="settings-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-6 z-50">
-    <div class="bg-white p-6 rounded-2xl w-full max-w-sm space-y-4">
-        <h3 class="font-bold">API Configuration</h3>
-        <input id="api-key-input" type="password" placeholder="Paste Gemini Key Here" class="w-full p-2 border rounded">
-        <button onclick="saveKey()" class="w-full py-2 bg-green-600 text-white rounded-lg">Save Key</button>
-    </div>
-</div>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Teacher Practice</title>
+    <title>AI English Coach</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .chat-bg { background-color: #e5ddd5; background-image: url('https://user-images.githubusercontent.com/15075759/28719144-86dc0f70-73b1-11e7-911d-60d70fcded21.png'); }
@@ -24,19 +15,23 @@
 </head>
 <body class="bg-slate-100 font-sans">
 
+    <button onclick="toggleSettings()" class="fixed top-4 right-4 z-50 text-white bg-black/20 p-2 rounded-full hover:bg-black/40 transition-colors">⚙️</button>
+
+    <div id="settings-modal" class="hidden fixed inset-0 bg-black/50 flex items-center justify-center p-6 z-[60]">
+        <div class="bg-white p-6 rounded-2xl w-full max-w-sm space-y-4 shadow-xl">
+            <h3 class="font-bold text-lg">API Configuration</h3>
+            <p class="text-xs text-slate-500">Enter your Gemini API Key. It is saved only on this device.</p>
+            <input id="api-key-input" type="password" placeholder="Paste Gemini Key Here" class="w-full p-3 border rounded-xl outline-none focus:border-green-600">
+            <button onclick="saveKey()" class="w-full py-3 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition-all">Save Key</button>
+            <button onclick="toggleSettings()" class="w-full py-2 text-slate-500 text-sm">Cancel</button>
+        </div>
+    </div>
+
     <div id="home-page" class="min-h-screen flex flex-col items-center justify-center p-6 text-center">
         <div class="max-w-md bg-white p-8 rounded-3xl shadow-2xl space-y-6">
             <div class="text-5xl">👨‍🏫</div>
             <h1 class="text-3xl font-extrabold text-slate-800">AI English Coach</h1>
-            <p class="text-slate-600 leading-relaxed">
-                Improve your English fluency with real-time voice practice. 
-                <span class="block mt-2 font-semibold">Speak. Correct. Learn.</span>
-            </p>
-            <div class="text-left bg-slate-50 p-4 rounded-xl text-sm space-y-2">
-                <p>✅ <strong>Voice Only:</strong> No typing needed.</p>
-                <p>✅ <strong>Instant Correction:</strong> Fix grammar on the fly.</p>
-                <p>✅ <strong>Natural Chat:</strong> Like talking to a friend.</p>
-            </div>
+            <p class="text-slate-600">Improve your fluency with real-time practice.</p>
             <button onclick="startApp()" class="w-full py-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-2xl shadow-lg transition-all transform active:scale-95">
                 Start Practicing
             </button>
@@ -52,10 +47,9 @@
             </div>
         </div>
 
-        <div id="chat-window" class="flex-1 overflow-y-auto p-4 space-y-4 chat-bg flex flex-col">
-            </div>
+        <div id="chat-window" class="flex-1 overflow-y-auto p-4 space-y-4 chat-bg flex flex-col"></div>
 
-        <div class="bg-white p-4 border-t flex flex-col items-center space-y-3">
+        <div class="bg-white p-6 border-t flex flex-col items-center space-y-3">
             <button id="talk-btn" class="w-20 h-20 bg-green-600 rounded-full flex items-center justify-center text-white shadow-xl hover:scale-105 active:scale-90 transition-all border-4 border-white">
                 <span id="mic-icon" class="text-3xl">🎤</span>
             </button>
@@ -64,204 +58,144 @@
     </div>
 
     <script>
-        // --- 1. CONFIGURATION ---
         let GEMINI_API_KEY = localStorage.getItem('user_gemini_key') || "";
-
-		function toggleSettings() {
-    		document.getElementById('settings-modal').classList.toggle('hidden');
-	}
-
-		function saveKey() {
-    		const newKey = document.getElementById('api-key-input').value;
-    		localStorage.setItem('user_gemini_key', newKey);
-    		GEMINI_API_KEY = newKey;
-    		toggleSettings();
-    		alert("Key saved locally on this device!");
-	}
-
-    const homePage = document.getElementById('home-page');
-    const chatPage = document.getElementById('chat-page');
-    const chatWindow = document.getElementById('chat-window');
-    const statusText = document.getElementById('status-text');
-    const micHint = document.getElementById('mic-hint');
-    const btn = document.getElementById('talk-btn');
-
-    let isRecording = false;
-    let finalTranscript = ""; 
-
-    // --- 2. NAVIGATION ---
-    function startApp() {
-        homePage.classList.add('hidden');
-        chatPage.classList.remove('hidden');
-        addChatMessage("Hello! I'm your English teacher. Tap the mic to start speaking, and tap again when you're finished.", false);
-        // Load voices early
-        window.speechSynthesis.getVoices();
-    }
-
-    // --- 3. SPEECH RECOGNITION SETUP ---
-// --- 3. SPEECH ENGINE (REFINED) ---
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-const recognition = new SpeechRecognition();
-recognition.continuous = true;
-recognition.interimResults = true;
-recognition.lang = 'en-US';
-
-// NEW: This prevents the "thisthis isthis" stuttering on mobile
-recognition.onresult = (event) => {
-    let interimTranscript = "";
-    // We clear the temporary string each time the event fires
-    let currentSessionText = ""; 
-    
-    for (let i = event.resultIndex; i < event.results.length; ++i) {
-        const transcript = event.results[i][0].transcript;
-        if (event.results[i].isFinal) {
-            finalTranscript += transcript;
-        } else {
-            interimTranscript += transcript;
-        }
-    }
-    // Live feedback in the green header
-    statusText.innerText = "Hearing: " + (finalTranscript + interimTranscript);
-};
-
-// NEW: This keeps the mic alive if Android tries to sleep
-recognition.onend = () => {
-    if (isRecording) {
-        console.log("Restarting recognition for continuous listening...");
-        recognition.start();
-    }
-};
-
-// ERROR HANDLING: If the mic fails, reset the UI
-recognition.onerror = (event) => {
-    console.error("Speech Error:", event.error);
-    if (event.error === 'not-allowed') {
-        alert("Microphone blocked! Please allow access in browser settings.");
-    }
-    isRecording = false;
-    btn.classList.replace('bg-red-500', 'bg-green-600');
-    statusText.innerText = "Online";
-};
-
-    function startListening() {
-        finalTranscript = ""; 
-        try {
-            recognition.start();
-            isRecording = true;
-            btn.classList.replace('bg-green-600', 'bg-red-500');
-            micHint.innerText = "Tap to Finish";
-            statusText.innerText = "Listening...";
-        } catch (e) {
-            console.error("Mic error:", e);
-        }
-    }
-
-    function stopAndSend() {
-        recognition.stop();
-        isRecording = false;
-        btn.classList.replace('bg-red-500', 'bg-green-600');
-        micHint.innerText = "Tap to Speak";
         
-        // Wait a tiny bit for the final 'onresult' to fire
-        setTimeout(() => {
-            if (finalTranscript.trim().length > 0) {
-                addChatMessage(finalTranscript, true);
-                statusText.innerText = "Teacher is thinking...";
-                askGemini(finalTranscript);
-            } else {
-                statusText.innerText = "Online";
+        const homePage = document.getElementById('home-page');
+        const chatPage = document.getElementById('chat-page');
+        const chatWindow = document.getElementById('chat-window');
+        const statusText = document.getElementById('status-text');
+        const micHint = document.getElementById('mic-hint');
+        const btn = document.getElementById('talk-btn');
+
+        let isRecording = false;
+        let finalTranscript = ""; 
+
+        function toggleSettings() {
+            document.getElementById('settings-modal').classList.toggle('hidden');
+        }
+
+        function saveKey() {
+            const newKey = document.getElementById('api-key-input').value;
+            if(newKey) {
+                localStorage.setItem('user_gemini_key', newKey);
+                GEMINI_API_KEY = newKey;
+                toggleSettings();
+                alert("Key saved!");
             }
-        }, 500);
-    }
-
-recognition.onresult = (event) => {
-    // Reset our local temporary string for this specific event
-    let currentSessionText = "";
-    
-    for (let i = event.resultIndex; i < event.results.length; ++i) {
-        const transcript = event.results[i][0].transcript;
-        
-        if (event.results[i].isFinal) {
-            // ONLY add to finalTranscript if the browser is 100% sure the sentence ended
-            finalTranscript += transcript;
-        } else {
-            // Otherwise, just keep it in the temporary "interim" variable
-            currentSessionText += transcript;
         }
-    }
-    
-    // Update the status text so you see the live "guessing"
-    statusText.innerText = "Hearing: " + (finalTranscript + currentSessionText);
-};
 
-    // --- 4. BRAIN (GEMINI) ---
-    async function askGemini(text) {
-        // Using the v1 stable path we found works for you
-        const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-        
-        try {
-            const response = await fetch(url, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: `You are a friendly female English Trainer. 
-					The student said: "${text}". Briefly correct grammar and reply in 1-2 friendly sentences, 
-					also share a more professional way to say it and ask a question in the end.
-					The question can be either as a parent of a student, a student, a principal or a fellow teacher. 	
-			` }] }]
-                })
-            });
-
-            const data = await response.json();
-            
-            if (data.error) throw new Error(data.error.message);
-
-            const reply = data.candidates[0].content.parts[0].text;
-            addChatMessage(reply, false);
-            statusText.innerText = "Online";
-            speak(reply);
-            
-        } catch (err) {
-            console.error(err);
-            statusText.innerText = "Error. Try again.";
+        function startApp() {
+            if (!GEMINI_API_KEY) {
+                toggleSettings();
+                return;
+            }
+            homePage.classList.add('hidden');
+            chatPage.classList.remove('hidden');
+            addChatMessage("Hello! I'm your English teacher. Tap the mic to start speaking, and tap again when you're finished.", false);
         }
-    }
 
-    // --- 5. UI HELPERS ---
-    function addChatMessage(text, isUser) {
-        const wrapper = document.createElement('div');
-        wrapper.className = `flex w-full mb-4 ${isUser ? 'justify-end' : 'justify-start'}`;
-        
-        const bubble = document.createElement('div');
-        bubble.className = `max-w-[85%] px-4 py-2 shadow-md text-sm ${isUser ? 'user-bubble' : 'bot-bubble'}`;
-        bubble.innerText = text;
-        
-        wrapper.appendChild(bubble);
-        chatWindow.appendChild(wrapper);
-        chatWindow.scrollTop = chatWindow.scrollHeight;
-    }
+        // --- SPEECH ENGINE ---
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const recognition = new SpeechRecognition();
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.lang = 'en-US';
 
-    // --- 6. NATURAL FEMALE VOICE ---
-    function speak(text) {
-        window.speechSynthesis.cancel();
-        const utterance = new SpeechSynthesisUtterance(text);
-        
-        // Let's find the best Female voice
-        const voices = window.speechSynthesis.getVoices();
-        
-        // Priority list for natural female voices
-        const femaleVoice = voices.find(v => v.name.includes('Google US English') && v.name.includes('Female')) ||
-                            voices.find(v => v.name.includes('Samantha')) ||
-                            voices.find(v => v.name.includes('Zira')) ||
-                            voices.find(v => v.lang.includes('en') && (v.name.includes('Female') || v.name.includes('Natural')));
+        btn.onclick = () => {
+            if (!isRecording) {
+                startListening();
+            } else {
+                stopAndSend();
+            }
+        };
 
-        utterance.voice = femaleVoice || voices[0];
-        utterance.rate = 0.9;  // Slightly slower
-        utterance.pitch = 1.15; // Feminine pitch
-        
-        window.speechSynthesis.speak(utterance);
-    }
-</script>
+        function startListening() {
+            finalTranscript = ""; 
+            try {
+                recognition.start();
+                isRecording = true;
+                btn.classList.replace('bg-green-600', 'bg-red-500');
+                micHint.innerText = "Tap to Finish";
+                statusText.innerText = "Listening...";
+            } catch (e) { console.error(e); }
+        }
 
+        function stopAndSend() {
+            recognition.stop();
+            isRecording = false;
+            btn.classList.replace('bg-red-500', 'bg-green-600');
+            micHint.innerText = "Tap to Speak";
+            
+            setTimeout(() => {
+                if (finalTranscript.trim().length > 0) {
+                    addChatMessage(finalTranscript, true);
+                    askGemini(finalTranscript);
+                } else {
+                    statusText.innerText = "Online";
+                }
+            }, 600);
+        }
+
+        recognition.onresult = (event) => {
+            let interimTranscript = "";
+            for (let i = event.resultIndex; i < event.results.length; ++i) {
+                if (event.results[i].isFinal) {
+                    finalTranscript += event.results[i][0].transcript;
+                } else {
+                    interimTranscript += event.results[i][0].transcript;
+                }
+            }
+            statusText.innerText = "Hearing: " + (finalTranscript + interimTranscript);
+        };
+
+        recognition.onend = () => {
+            if (isRecording) recognition.start(); // Keep alive if Android tries to cut off
+        };
+
+        async function askGemini(text) {
+            const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+            statusText.innerText = "Teacher is thinking...";
+            
+            try {
+                const response = await fetch(url, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: `You are a friendly female English Trainer. The student said: "${text}". Briefly correct grammar and reply in 1-2 friendly sentences. Then, provide a professional alternative. End with a question for the student.` }] }]
+                    })
+                });
+
+                const data = await response.json();
+                const reply = data.candidates[0].content.parts[0].text;
+                addChatMessage(reply, false);
+                statusText.innerText = "Online";
+                speak(reply);
+            } catch (err) {
+                statusText.innerText = "Error. Check API Key.";
+            }
+        }
+
+        function addChatMessage(text, isUser) {
+            const wrapper = document.createElement('div');
+            wrapper.className = `flex w-full mb-4 ${isUser ? 'justify-end' : 'justify-start'}`;
+            const bubble = document.createElement('div');
+            bubble.className = `max-w-[85%] px-4 py-2 shadow-md text-sm ${isUser ? 'user-bubble' : 'bot-bubble'}`;
+            bubble.innerText = text;
+            wrapper.appendChild(bubble);
+            chatWindow.appendChild(wrapper);
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+        }
+
+        function speak(text) {
+            window.speechSynthesis.cancel();
+            const utterance = new SpeechSynthesisUtterance(text);
+            const voices = window.speechSynthesis.getVoices();
+            const femaleVoice = voices.find(v => v.name.includes('Female') || v.name.includes('Google US English') || v.name.includes('Samantha'));
+            utterance.voice = femaleVoice || voices[0];
+            utterance.rate = 0.9;
+            utterance.pitch = 1.15;
+            window.speechSynthesis.speak(utterance);
+        }
+    </script>
 </body>
 </html>
