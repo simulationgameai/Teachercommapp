@@ -145,17 +145,25 @@
         }, 500);
     }
 
-    recognition.onresult = (event) => {
-        let interimTranscript = "";
-        for (let i = event.resultIndex; i < event.results.length; ++i) {
-            if (event.results[i].isFinal) {
-                finalTranscript += event.results[i][0].transcript;
-            } else {
-                interimTranscript += event.results[i][0].transcript;
-            }
+recognition.onresult = (event) => {
+    // Reset our local temporary string for this specific event
+    let currentSessionText = "";
+    
+    for (let i = event.resultIndex; i < event.results.length; ++i) {
+        const transcript = event.results[i][0].transcript;
+        
+        if (event.results[i].isFinal) {
+            // ONLY add to finalTranscript if the browser is 100% sure the sentence ended
+            finalTranscript += transcript;
+        } else {
+            // Otherwise, just keep it in the temporary "interim" variable
+            currentSessionText += transcript;
         }
-        statusText.innerText = "Hearing: " + (finalTranscript + interimTranscript);
-    };
+    }
+    
+    // Update the status text so you see the live "guessing"
+    statusText.innerText = "Hearing: " + (finalTranscript + currentSessionText);
+};
 
     // --- 4. BRAIN (GEMINI) ---
     async function askGemini(text) {
