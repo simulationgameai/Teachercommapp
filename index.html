@@ -136,17 +136,28 @@
             }, 600);
         }
 
-        recognition.onresult = (event) => {
-            let interimTranscript = "";
-            for (let i = event.resultIndex; i < event.results.length; ++i) {
-                if (event.results[i].isFinal) {
-                    finalTranscript += event.results[i][0].transcript;
-                } else {
-                    interimTranscript += event.results[i][0].transcript;
-                }
-            }
-            statusText.innerText = "Hearing: " + (finalTranscript + interimTranscript);
-        };
+recognition.onresult = (event) => {
+    // 1. Reset the interim string for EVERY single event trigger
+    let interimTranscript = "";
+    let finalTranscriptForThisEvent = "";
+
+    // 2. Loop through all results provided by the Android engine
+    for (let i = event.resultIndex; i < event.results.length; ++i) {
+        const transcript = event.results[i][0].transcript;
+        
+        if (event.results[i].isFinal) {
+            // Only add to the permanent record if the phone is 100% sure
+            finalTranscript += transcript;
+        } else {
+            // Otherwise, keep it in the temporary "guessing" string
+            interimTranscript += transcript;
+        }
+    }
+
+    // 3. Update the UI - this ensures 'thisthis isthis' never happens
+    // because we are viewing a 'snapshot' of the current speech, not a growing pile.
+    statusText.innerText = "Hearing: " + (finalTranscript + interimTranscript);
+};
 
         recognition.onend = () => {
             if (isRecording) recognition.start(); // Keep alive if Android tries to cut off
