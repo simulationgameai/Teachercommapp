@@ -202,8 +202,8 @@ recognition.onresult = (event) => {
             const utterance = new SpeechSynthesisUtterance(text);
             const voices = window.speechSynthesis.getVoices();
             const femaleVoice = voices.find(v => v.name.includes('Female') || v.name.includes('Google US English') || v.name.includes('Samantha'));
-            utterance.voice = femaleVoice || voices[0];
-            utterance.rate = 0.9;
+            utterance.voice = femaleVoice || voices[1];
+            utterance.rate = 1.0;
             utterance.pitch = 1.15;
             window.speechSynthesis.speak(utterance);
         }
