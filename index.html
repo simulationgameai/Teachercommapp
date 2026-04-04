@@ -172,7 +172,7 @@ recognition.onresult = (event) => {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        contents: [{ parts: [{ text: `You are a friendly female English Trainer. The student said: "${text}". Briefly correct grammar and reply in 1-2 friendly sentences. Then, provide a professional alternative. End with a question for the student.` }] }]
+                        contents: [{ parts: [{ text: `English Trainer. said: "${text}". Briefly correct grammar + a professional alt + aquestion.` }] }]
                     })
                 });
 
